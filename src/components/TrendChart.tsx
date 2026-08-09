@@ -66,9 +66,17 @@ export const TrendChart: React.FC<TrendChartProps> = ({ data, parameters }) => {
       });
     });
 
-    return Object.values(mergedData).sort((a, b) => 
-      a.timestamp.localeCompare(b.timestamp)
-    );
+    return Object.values(mergedData).sort((a: any, b: any) => {
+      const timeA = new Date(a.timestamp).getTime();
+      const timeB = new Date(b.timestamp).getTime();
+      
+      if (!isNaN(timeA) && !isNaN(timeB)) {
+        return timeA - timeB;
+      }
+      
+      // Fallback if parsing fails
+      return a.timestamp.localeCompare(b.timestamp);
+    });
   }, [data]);
 
   // Calculate min and max ONLY for the active parameter to determine exact Y-Axis boundaries
