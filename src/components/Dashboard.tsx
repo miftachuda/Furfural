@@ -40,14 +40,11 @@ export const Dashboard: React.FC = () => {
       const tagNames = parameters.map((p) => p.tagNumber);
 
       // Fetch trend data (15 min interval = 900000ms)
-      // Fetch hourly data (1 hour interval = 3600000ms)
-      const [trendRes, hourlyRes] = await Promise.all([
-        fetchPlantData(tagNames, 900000),
-        fetchPlantData(tagNames, 3600000),
-      ]);
-
-      setTrendData(trendRes);
-      setHourlyData(hourlyRes);
+      // We will use this same 15-min data to calculate hourly averages locally
+      const responseData = await fetchPlantData(tagNames, 900000);
+      
+      setTrendData(responseData);
+      setHourlyData(responseData);
     } catch (error) {
       console.error("Failed to load data", error);
     } finally {

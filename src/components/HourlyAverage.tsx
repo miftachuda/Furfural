@@ -12,18 +12,17 @@ export const HourlyAverage: React.FC<HourlyAverageProps> = ({ data, parameters }
   const hourlyData = useMemo(() => {
     if (!data || data.length === 0) return [];
     
-    // Group samples by hour and minute to ensure tags align on the exact same row
-    const hourlyGroups: Record<string, Record<string, number>> = {};
+    // Group samples by hour to calculate the hourly average from the 15-min data
+    const hourlyGroups: Record<string, Record<string, { sum: number; count: number }>> = {};
 
     data.forEach((tagData) => {
       tagData.Samples.forEach((sample) => {
-        // Parse the exact time and convert it to 24-hour format
-        // This drops the seconds/milliseconds so slight deviations don't split rows
+        // Parse the exact time and round it down to the current hour
         let hourBucket = sample.TimeStamp;
         try {
           const dt = new Date(sample.TimeStamp);
           if (!isNaN(dt.getTime())) {
-            hourBucket = format(dt, 'yyyy-MM-dd HH:mm');
+            hourBucket = format(dt, 'yyyy-MM-dd HH:00');
           } else {
             const parts = sample.TimeStamp.split(' ');
             if (parts.length >= 2) {
@@ -31,7 +30,7 @@ export const HourlyAverage: React.FC<HourlyAverageProps> = ({ data, parameters }
               const timePart = parts[1];
               const timeParts = timePart.split(':');
               if (timeParts.length >= 2) {
-                hourBucket = `${datePart} ${timeParts[0]}:${timeParts[1]}`;
+                hourBucket = `${datePart} ${timeParts[0]}:00`;
               }
             }
           }
@@ -43,7 +42,12 @@ export const HourlyAverage: React.FC<HourlyAverageProps> = ({ data, parameters }
           hourlyGroups[hourBucket] = {};
         }
         
-        hourlyGroups[hourBucket][tagData.TagName] = sample.Value;
+        if (!hourlyGroups[hourBucket][tagData.TagName]) {
+          hourlyGroups[hourBucket][tagData.TagName] = { sum: 0, count: 0 };
+        }
+        
+        hourlyGroups[hourBucket][tagData.TagName].sum += sample.Value;
+        hourlyGroups[hourBucket][tagData.TagName].count += 1;
       });
     });
 
@@ -51,8 +55,9 @@ export const HourlyAverage: React.FC<HourlyAverageProps> = ({ data, parameters }
     const rows = Object.keys(hourlyGroups).sort().map((hour) => {
       const row: any = { hour };
       parameters.forEach(param => {
-        const val = hourlyGroups[hour][param.tagNumber];
-        if (val !== undefined) {
+        const stats = hourlyGroups[hour][param.tagNumber];
+        if (stats && stats.count > 0) {
+          const val = stats.sum / stats.count;
           // Show 3 digits if it's a "0." value (between -1 and 1)
           row[param.tagNumber] = Math.abs(val) < 1 ? val.toFixed(3) : val.toFixed(2);
         } else {
