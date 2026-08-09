@@ -25,7 +25,7 @@ export interface TagDataResponse {
   Samples: DataSample[];
 }
 
-export const fetchPlantData = async (tagNames: string[]): Promise<TagDataResponse[]> => {
+export const fetchPlantData = async (tagNames: string[], sampleInterval: number = 900000): Promise<TagDataResponse[]> => {
   if (tagNames.length === 0) return [];
 
   const now = new Date();
@@ -36,7 +36,7 @@ export const fetchPlantData = async (tagNames: string[]): Promise<TagDataRespons
   const endFormat = format(now, 'MM/dd/yyyy HH:mm:ss.SSS');
 
   const payload: ApiPayload[] = [{
-    SampleInterval: 900000,
+    SampleInterval: sampleInterval,
     GetEnum: false,
     ResampleMethod: "snapshot",
     MinimumConfidence: 40,

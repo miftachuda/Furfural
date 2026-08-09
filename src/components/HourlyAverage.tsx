@@ -11,23 +11,19 @@ export const HourlyAverage: React.FC<HourlyAverageProps> = ({ data, parameters }
   const hourlyData = useMemo(() => {
     if (!data || data.length === 0) return [];
     
-    // Group samples by hour
-    const hourlyGroups: Record<string, Record<string, { sum: number; count: number }>> = {};
+    // Group samples by exact timestamp since the API already returns hourly intervals
+    const hourlyGroups: Record<string, Record<string, number>> = {};
 
     data.forEach((tagData) => {
       tagData.Samples.forEach((sample) => {
-        // sample.TimeStamp is "yyyy-MM-dd HH:mm:ss"
-        const hour = sample.TimeStamp.substring(0, 13) + ":00"; // get up to hour
+        const hour = sample.TimeStamp;
         
         if (!hourlyGroups[hour]) {
           hourlyGroups[hour] = {};
         }
-        if (!hourlyGroups[hour][tagData.TagName]) {
-          hourlyGroups[hour][tagData.TagName] = { sum: 0, count: 0 };
-        }
         
-        hourlyGroups[hour][tagData.TagName].sum += sample.Value;
-        hourlyGroups[hour][tagData.TagName].count += 1;
+        // Just take the value directly since the API is providing hourly data
+        hourlyGroups[hour][tagData.TagName] = sample.Value;
       });
     });
 
@@ -35,9 +31,9 @@ export const HourlyAverage: React.FC<HourlyAverageProps> = ({ data, parameters }
     const rows = Object.keys(hourlyGroups).sort().map((hour) => {
       const row: any = { hour };
       parameters.forEach(param => {
-        const stats = hourlyGroups[hour][param.tagNumber];
-        if (stats && stats.count > 0) {
-          row[param.tagNumber] = (stats.sum / stats.count).toFixed(2);
+        const val = hourlyGroups[hour][param.tagNumber];
+        if (val !== undefined) {
+          row[param.tagNumber] = val.toFixed(2);
         } else {
           row[param.tagNumber] = '-';
         }

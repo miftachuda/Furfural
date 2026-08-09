@@ -10,7 +10,8 @@ import { Activity, RefreshCcw } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const [parameters, setParameters] = useState<PlantParameter[]>([]);
-  const [data, setData] = useState<TagDataResponse[]>([]);
+  const [trendData, setTrendData] = useState<TagDataResponse[]>([]);
+  const [hourlyData, setHourlyData] = useState<TagDataResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [paramsLoading, setParamsLoading] = useState(true);
 
@@ -36,8 +37,16 @@ export const Dashboard: React.FC = () => {
     setLoading(true);
     try {
       const tagNames = parameters.map(p => p.tagNumber);
-      const responseData = await fetchPlantData(tagNames);
-      setData(responseData);
+      
+      // Fetch trend data (15 min interval = 900000ms)
+      // Fetch hourly data (1 hour interval = 3600000ms)
+      const [trendRes, hourlyRes] = await Promise.all([
+        fetchPlantData(tagNames, 900000),
+        fetchPlantData(tagNames, 3600000)
+      ]);
+      
+      setTrendData(trendRes);
+      setHourlyData(hourlyRes);
     } catch (error) {
       console.error("Failed to load data", error);
     } finally {
@@ -83,7 +92,7 @@ export const Dashboard: React.FC = () => {
         )}
 
         {/* Charts & Tables */}
-        {(loading || paramsLoading) && data.length === 0 ? (
+        {(loading || paramsLoading) && trendData.length === 0 ? (
           <div className="h-64 flex items-center justify-center bg-white rounded-lg border border-gray-100">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
@@ -91,11 +100,11 @@ export const Dashboard: React.FC = () => {
           <div className="space-y-6">
             <section>
               <h2 className="text-lg font-semibold text-gray-800 mb-3">Parameter Trending</h2>
-              <TrendChart data={data} parameters={parameters} />
+              <TrendChart data={trendData} parameters={parameters} />
             </section>
             
             <section>
-              <HourlyAverage data={data} parameters={parameters} />
+              <HourlyAverage data={hourlyData} parameters={parameters} />
             </section>
           </div>
         )}
