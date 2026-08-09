@@ -52,12 +52,13 @@ export const defaultParameters: PlantParameter[] = [
 ];
 
 // Helper functions for PocketBase
-const COLLECTION_NAME = 'parameters';
+const COLLECTION_NAME = 'furfural';
 
 export const fetchParameters = async (): Promise<PlantParameter[]> => {
   try {
     const records = await pb.collection(COLLECTION_NAME).getFullList({
       sort: 'created',
+      $autoCancel: false, // Prevents React StrictMode from canceling the first request
     });
     
     if (records.length === 0) {
@@ -66,13 +67,13 @@ export const fetchParameters = async (): Promise<PlantParameter[]> => {
     
     return records.map(record => ({
       id: record.id,
-      tagNumber: record.tagNumber,
-      name: record.name,
-      description: record.description,
-      limitLow: record.limitLow,
-      limitHigh: record.limitHigh,
-      color: record.color,
-      unit: record.unit,
+      tagNumber: record.tag_number || '',
+      name: record.name || record.tag_number || 'Unknown Parameter',
+      description: record.description || '',
+      limitLow: record.low !== undefined ? record.low : 0,
+      limitHigh: record.high !== undefined ? record.high : 0,
+      color: record.color || '#3b82f6',
+      unit: record.unit || '',
     }));
   } catch (error) {
     console.error("Error fetching parameters from PocketBase. Using defaults.", error);
@@ -82,15 +83,24 @@ export const fetchParameters = async (): Promise<PlantParameter[]> => {
 
 export const saveParameter = async (param: PlantParameter): Promise<PlantParameter> => {
   try {
+    // Map frontend model to PocketBase schema
+    const pbData = {
+      tag_number: param.tagNumber,
+      high: param.limitHigh,
+      low: param.limitLow,
+      name: param.name,
+      description: param.description,
+      color: param.color,
+      unit: param.unit
+    };
+
     if (param.id && !param.id.startsWith('p_')) {
       // Update existing record
-      const record = await pb.collection(COLLECTION_NAME).update(param.id, param);
+      const record = await pb.collection(COLLECTION_NAME).update(param.id, pbData);
       return { ...param, id: record.id };
     } else {
       // Create new record
-      // Remove temporary frontend ID if it exists
-      const { id, ...dataToSave } = param;
-      const record = await pb.collection(COLLECTION_NAME).create(dataToSave);
+      const record = await pb.collection(COLLECTION_NAME).create(pbData);
       return { ...param, id: record.id };
     }
   } catch (error) {

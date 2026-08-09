@@ -63,7 +63,34 @@ export const fetchPlantData = async (tagNames: string[]): Promise<TagDataRespons
       throw new Error(`API error: ${response.status}`);
     }
 
-    const data = await response.json();
+    const rawData = await response.json();
+    
+    // Transform the raw API format into the expected TagDataResponse format
+    const data: TagDataResponse[] = rawData.map((item: any) => {
+      const samples: DataSample[] = [];
+      
+      // The API returns arrays of TimeStamps and Values
+      const timeStamps = item.TimeStamp || [];
+      const values = item.Value || [];
+      
+      const length = Math.min(timeStamps.length, values.length);
+      
+      for (let i = 0; i < length; i++) {
+        // Skip empty timestamps
+        if (timeStamps[i] && timeStamps[i] !== "") {
+          samples.push({
+            TimeStamp: timeStamps[i],
+            Value: values[i]
+          });
+        }
+      }
+      
+      return {
+        TagName: item.TagName,
+        Samples: samples
+      };
+    });
+
     return data;
   } catch (error) {
     console.error("Failed to fetch from API, returning empty data:", error);
