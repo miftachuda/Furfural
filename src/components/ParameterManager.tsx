@@ -100,7 +100,7 @@ export const ParameterManager: React.FC<ParameterManagerProps> = ({ parameters, 
             
             {editingId === p.id ? (
               // Edit Mode
-              <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-3 items-center">
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-6 gap-3 items-center">
                 <input 
                   type="text" 
                   className="px-2 py-1 border border-gray-300 rounded text-sm"
@@ -114,6 +114,13 @@ export const ParameterManager: React.FC<ParameterManagerProps> = ({ parameters, 
                   value={editForm.name} 
                   onChange={e => setEditForm({...editForm, name: e.target.value})}
                   placeholder="Name"
+                />
+                <input 
+                  type="text" 
+                  className="px-2 py-1 border border-gray-300 rounded text-sm"
+                  value={editForm.description} 
+                  onChange={e => setEditForm({...editForm, description: e.target.value})}
+                  placeholder="Description"
                 />
                 <div className="flex items-center gap-1">
                   <span className="text-xs text-gray-500">Low:</span>
@@ -163,9 +170,9 @@ export const ParameterManager: React.FC<ParameterManagerProps> = ({ parameters, 
               // View Mode
               <>
                 <div className="flex-1 flex flex-wrap items-center gap-x-6 gap-y-1">
-                  <div>
+                  <div className="flex flex-col">
                     <span className="font-semibold text-gray-800">{p.name}</span>
-                    <span className="text-xs text-gray-500 ml-2 font-mono bg-gray-100 px-1 py-0.5 rounded">{p.tagNumber}</span>
+                    {p.description && <span className="text-xs text-gray-500 mt-0.5">{p.description}</span>}
                   </div>
                   <div className="text-sm text-gray-600 flex gap-4">
                     <span>Limit Low: <strong className={p.limitLow !== undefined ? "text-red-500" : ""}>{p.limitLow}</strong></span>
@@ -202,7 +209,7 @@ export const ParameterManager: React.FC<ParameterManagerProps> = ({ parameters, 
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <input 
               type="text" 
               placeholder="Tag Number" 
@@ -216,6 +223,13 @@ export const ParameterManager: React.FC<ParameterManagerProps> = ({ parameters, 
               className="px-3 py-2 border border-gray-300 rounded-md text-sm bg-white"
               value={newParam.name || ''}
               onChange={e => setNewParam({...newParam, name: e.target.value})}
+            />
+            <input 
+              type="text" 
+              placeholder="Description" 
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm bg-white"
+              value={newParam.description || ''}
+              onChange={e => setNewParam({...newParam, description: e.target.value})}
             />
             <input 
               type="number" 

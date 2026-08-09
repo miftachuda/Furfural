@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import type { TagDataResponse } from '../services/api';
 import type { PlantParameter } from '../config/parameters';
+import { format } from 'date-fns';
 
 interface HourlyAverageProps {
   data: TagDataResponse[];
@@ -11,19 +12,38 @@ export const HourlyAverage: React.FC<HourlyAverageProps> = ({ data, parameters }
   const hourlyData = useMemo(() => {
     if (!data || data.length === 0) return [];
     
-    // Group samples by exact timestamp since the API already returns hourly intervals
+    // Group samples by hour and minute to ensure tags align on the exact same row
     const hourlyGroups: Record<string, Record<string, number>> = {};
 
     data.forEach((tagData) => {
       tagData.Samples.forEach((sample) => {
-        const hour = sample.TimeStamp;
-        
-        if (!hourlyGroups[hour]) {
-          hourlyGroups[hour] = {};
+        // Parse the exact time and convert it to 24-hour format
+        // This drops the seconds/milliseconds so slight deviations don't split rows
+        let hourBucket = sample.TimeStamp;
+        try {
+          const dt = new Date(sample.TimeStamp);
+          if (!isNaN(dt.getTime())) {
+            hourBucket = format(dt, 'yyyy-MM-dd HH:mm');
+          } else {
+            const parts = sample.TimeStamp.split(' ');
+            if (parts.length >= 2) {
+              const datePart = parts[0];
+              const timePart = parts[1];
+              const timeParts = timePart.split(':');
+              if (timeParts.length >= 2) {
+                hourBucket = `${datePart} ${timeParts[0]}:${timeParts[1]}`;
+              }
+            }
+          }
+        } catch (e) {
+          // Keep original if parsing fails
         }
         
-        // Just take the value directly since the API is providing hourly data
-        hourlyGroups[hour][tagData.TagName] = sample.Value;
+        if (!hourlyGroups[hourBucket]) {
+          hourlyGroups[hourBucket] = {};
+        }
+        
+        hourlyGroups[hourBucket][tagData.TagName] = sample.Value;
       });
     });
 
@@ -57,10 +77,17 @@ export const HourlyAverage: React.FC<HourlyAverageProps> = ({ data, parameters }
         <table className="w-full text-sm text-left">
           <thead className="text-xs text-gray-600 uppercase bg-gray-50">
             <tr>
-              <th className="px-6 py-3 font-medium">Time (Hour)</th>
+              <th className="px-6 py-4 font-medium align-top">Time (Hour)</th>
               {parameters.map((param) => (
-                <th key={param.id} className="px-6 py-3 font-medium" style={{ color: param.color }}>
-                  {param.name} ({param.unit})
+                <th key={param.id} className="px-6 py-4 font-medium align-top" style={{ color: param.color }}>
+                  <div className="flex flex-col gap-1">
+                    <span>{param.name} ({param.unit})</span>
+                    {param.description && (
+                      <span className="text-[10px] text-gray-500 font-normal normal-case leading-tight">
+                        {param.description}
+                      </span>
+                    )}
+                  </div>
                 </th>
               ))}
             </tr>
@@ -78,7 +105,7 @@ export const HourlyAverage: React.FC<HourlyAverageProps> = ({ data, parameters }
                   // Check if out of bounds
                   let isOut = false;
                   if (!isNaN(numVal)) {
-                    isOut = numVal < param.limitLow || numVal > param.limitHigh;
+                    isOut = numVal < Number(param.limitLow) || numVal > Number(param.limitHigh);
                   }
 
                   return (
