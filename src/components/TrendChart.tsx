@@ -193,9 +193,10 @@ export const TrendChart: React.FC<TrendChartProps> = ({ data, parameters }) => {
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="displayTime" stroke="#888" fontSize={12} />
               <YAxis stroke="#888" fontSize={12} domain={[chartMin, chartMax]} />
-              <Tooltip 
-                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-              />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  formatter={(value: any) => Math.abs(Number(value)) < 1 ? Number(value).toFixed(3) : Number(value).toFixed(2)}
+                />
               <Legend wrapperStyle={{ paddingTop: '20px' }} />
               
                   <Area

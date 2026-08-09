@@ -94,11 +94,13 @@ export const ParameterManager: React.FC<ParameterManagerProps> = ({ parameters, 
         </button>
       </div>
 
-      <div className="flex flex-col gap-3 mb-4">
-        {parameters.map(p => (
-          <div key={p.id} className="flex flex-col md:flex-row md:items-center justify-between p-3 rounded-md border border-gray-200 text-sm shadow-sm bg-white gap-3" style={{ borderLeftColor: p.color, borderLeftWidth: '4px' }}>
-            
-            {editingId === p.id ? (
+      {isOpen && (
+        <>
+          <div className="flex flex-col gap-3 mb-4">
+            {parameters.map(p => (
+              <div key={p.id} className="flex flex-col md:flex-row md:items-center justify-between p-3 rounded-md border border-gray-200 text-sm shadow-sm bg-white gap-3" style={{ borderLeftColor: p.color, borderLeftWidth: '4px' }}>
+                
+                {editingId === p.id ? (
               // Edit Mode
               <div className="flex-1 grid grid-cols-1 md:grid-cols-6 gap-3 items-center">
                 <input 
@@ -181,27 +183,24 @@ export const ParameterManager: React.FC<ParameterManagerProps> = ({ parameters, 
                   </div>
                 </div>
                 
-                {isOpen && (
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => startEdit(p)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded">
-                      <Edit2 size={16} />
-                    </button>
-                    <button onClick={() => handleRemove(p.id!)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded">
-                      <X size={16} />
-                    </button>
-                  </div>
-                )}
+                <div className="flex items-center gap-2">
+                  <button onClick={() => startEdit(p)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded">
+                    <Edit2 size={16} />
+                  </button>
+                  <button onClick={() => handleRemove(p.id!)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded">
+                    <X size={16} />
+                  </button>
+                </div>
               </>
             )}
           </div>
         ))}
       </div>
 
-      {isOpen && (
-        <div className="mt-4 p-4 border border-blue-100 bg-blue-50/30 rounded-lg">
-          <h3 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
-            <Plus size={16} /> Add New Parameter
-          </h3>
+      <div className="mt-4 p-4 border border-blue-100 bg-blue-50/30 rounded-lg">
+        <h3 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
+          <Plus size={16} /> Add New Parameter
+        </h3>
           
           {errorMsg && (
             <div className="mb-3 flex items-center gap-2 text-red-600 text-sm bg-red-50 p-2 rounded border border-red-100">
@@ -271,6 +270,7 @@ export const ParameterManager: React.FC<ParameterManagerProps> = ({ parameters, 
             </div>
           </div>
         </div>
+        </>
       )}
     </div>
   );

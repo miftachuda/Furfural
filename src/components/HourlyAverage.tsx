@@ -53,7 +53,8 @@ export const HourlyAverage: React.FC<HourlyAverageProps> = ({ data, parameters }
       parameters.forEach(param => {
         const val = hourlyGroups[hour][param.tagNumber];
         if (val !== undefined) {
-          row[param.tagNumber] = val.toFixed(2);
+          // Show 3 digits if it's a "0." value (between -1 and 1)
+          row[param.tagNumber] = Math.abs(val) < 1 ? val.toFixed(3) : val.toFixed(2);
         } else {
           row[param.tagNumber] = '-';
         }
@@ -102,16 +103,19 @@ export const HourlyAverage: React.FC<HourlyAverageProps> = ({ data, parameters }
                   const val = row[param.tagNumber];
                   const numVal = parseFloat(val);
                   
-                  // Check if out of bounds
-                  let isOut = false;
-                  if (!isNaN(numVal)) {
-                    isOut = numVal < Number(param.limitLow) || numVal > Number(param.limitHigh);
+                  let cellClass = 'text-gray-500';
+                  
+                  if (!isNaN(numVal) && val !== '-') {
+                    const isOut = numVal < Number(param.limitLow) || numVal > Number(param.limitHigh);
+                    cellClass = isOut 
+                      ? 'text-red-600 bg-red-50/50' 
+                      : 'text-emerald-600 bg-emerald-50/50';
                   }
 
                   return (
                     <td 
                       key={param.id} 
-                      className={`px-6 py-3 font-semibold ${isOut ? 'text-red-600 bg-red-50/50' : 'text-gray-700'}`}
+                      className={`px-6 py-3 font-semibold transition-colors ${cellClass}`}
                     >
                       {val}
                     </td>
