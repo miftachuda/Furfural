@@ -1,4 +1,4 @@
-import { addMinutes, format, parse } from 'date-fns';
+import { format, subDays } from 'date-fns';
 
 export interface ApiPayload {
   SampleInterval: number;
@@ -25,59 +25,48 @@ export interface TagDataResponse {
   Samples: DataSample[];
 }
 
-// Generate mock data for the requested tags
-export const fetchPlantData = async (payload: ApiPayload[]): Promise<TagDataResponse[]> => {
-  // In a real scenario:
-  // const response = await fetch('YOUR_API_ENDPOINT', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify(payload)
-  // });
-  // return response.json();
+export const fetchPlantData = async (tagNames: string[]): Promise<TagDataResponse[]> => {
+  if (tagNames.length === 0) return [];
 
-  console.log("Mock API call with payload:", payload);
-  
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const request = payload[0];
-      const result: TagDataResponse[] = [];
+  const now = new Date();
+  const startTime = subDays(now, 1); // Get data for the last 24 hours
 
-      // Parse start time "08/02/2026 12:12:03.727"
-      // date-fns parse format: MM/dd/yyyy HH:mm:ss.SSS
-      let start: Date;
-      try {
-        start = parse(request.StartTime.split('.')[0], 'MM/dd/yyyy HH:mm:ss', new Date());
-      } catch (e) {
-        start = new Date();
-      }
+  // Format: "MM/dd/yyyy HH:mm:ss.SSS"
+  const startFormat = format(startTime, 'MM/dd/yyyy HH:mm:ss.SSS');
+  const endFormat = format(now, 'MM/dd/yyyy HH:mm:ss.SSS');
 
-      request.TagName.forEach((tag) => {
-        const samples: DataSample[] = [];
-        let current = start;
-        let baseValue = tag.toLowerCase().includes('level') ? 50 : 65;
+  const payload: ApiPayload[] = [{
+    SampleInterval: 900000,
+    GetEnum: false,
+    ResampleMethod: "snapshot",
+    MinimumConfidence: 40,
+    MaxRows: 50000,
+    TimeFormat: 6,
+    ReductionData: "snapshot",
+    TagName: tagNames,
+    StartTime: startFormat,
+    EndTime: endFormat,
+    OutputTimeFormat: 6,
+    EventSequence: 0
+  }];
 
-        // Generate about 96 samples (15 min intervals for 24 hours) as an example
-        for (let i = 0; i < 96; i++) {
-          // Random walk for values
-          baseValue = baseValue + (Math.random() - 0.5) * 5;
-          // Keep it somewhat within bounds to show limit crossing occasionally
-          if (baseValue < 10) baseValue = 15;
-          if (baseValue > 95) baseValue = 90;
+  try {
+    const response = await fetch('https://apiv2.miftachuda.my.id/GetData', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
 
-          samples.push({
-            TimeStamp: format(current, 'yyyy-MM-dd HH:mm:ss'),
-            Value: parseFloat(baseValue.toFixed(2))
-          });
-          current = addMinutes(current, 15);
-        }
-        
-        result.push({
-          TagName: tag,
-          Samples: samples
-        });
-      });
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
 
-      resolve(result);
-    }, 1000); // simulate network delay
-  });
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Failed to fetch from API, returning empty data:", error);
+    return [];
+  }
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { initialParameters } from '../config/parameters';
+import { fetchParameters } from '../config/parameters';
 import type { PlantParameter } from '../config/parameters';
 import { fetchPlantData } from '../services/api';
 import type { TagDataResponse } from '../services/api';
@@ -9,32 +9,34 @@ import { ParameterManager } from './ParameterManager';
 import { Activity, RefreshCcw } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
-  const [parameters, setParameters] = useState<PlantParameter[]>(initialParameters);
+  const [parameters, setParameters] = useState<PlantParameter[]>([]);
   const [data, setData] = useState<TagDataResponse[]>([]);
   const [loading, setLoading] = useState(false);
+  const [paramsLoading, setParamsLoading] = useState(true);
+
+  // Load parameters from PocketBase on mount
+  useEffect(() => {
+    const loadParams = async () => {
+      setParamsLoading(true);
+      const params = await fetchParameters();
+      // Ensure params have IDs for React keys
+      const paramsWithIds = params.map(p => ({
+        ...p, 
+        id: p.id || `p_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      }));
+      setParameters(paramsWithIds);
+      setParamsLoading(false);
+    };
+    loadParams();
+  }, []);
 
   const loadData = async () => {
+    if (parameters.length === 0) return;
+    
     setLoading(true);
     try {
       const tagNames = parameters.map(p => p.tagNumber);
-      
-      // Simulated payload according to user's requirements
-      const payload = [{
-        "SampleInterval": 900000,
-        "GetEnum": false,
-        "ResampleMethod": "snapshot",
-        "MinimumConfidence": 40,
-        "MaxRows": 50000,
-        "TimeFormat": 6,
-        "ReductionData": "snapshot",
-        "TagName": tagNames,
-        "StartTime": "08/02/2026 12:12:03.727",
-        "EndTime": "08/09/2026 12:12:03.728",
-        "OutputTimeFormat": 6,
-        "EventSequence": 0
-      }];
-
-      const responseData = await fetchPlantData(payload);
+      const responseData = await fetchPlantData(tagNames);
       setData(responseData);
     } catch (error) {
       console.error("Failed to load data", error);
@@ -43,10 +45,13 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  // Reload data when parameters change (and are loaded)
   useEffect(() => {
-    loadData();
+    if (!paramsLoading) {
+      loadData();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parameters]); // reload data when parameters change
+  }, [parameters, paramsLoading]);
 
   return (
     <div className="min-h-screen bg-gray-50/50 p-6 font-sans">
@@ -64,8 +69,8 @@ export const Dashboard: React.FC = () => {
           
           <button 
             onClick={loadData}
-            disabled={loading}
-            className={`flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={loading || paramsLoading}
+            className={`flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors ${(loading || paramsLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <RefreshCcw size={16} className={loading ? 'animate-spin' : ''} />
             {loading ? 'Refreshing...' : 'Refresh Data'}
@@ -73,10 +78,12 @@ export const Dashboard: React.FC = () => {
         </header>
 
         {/* Settings/Manager */}
-        <ParameterManager parameters={parameters} onParametersChange={setParameters} />
+        {!paramsLoading && (
+          <ParameterManager parameters={parameters} onParametersChange={setParameters} />
+        )}
 
         {/* Charts & Tables */}
-        {loading && data.length === 0 ? (
+        {(loading || paramsLoading) && data.length === 0 ? (
           <div className="h-64 flex items-center justify-center bg-white rounded-lg border border-gray-100">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
