@@ -6,14 +6,23 @@ import { format } from 'date-fns';
 interface HourlyAverageProps {
   data: TagDataResponse[];
   parameters: PlantParameter[];
+  selectedDate?: string;
 }
 
-export const HourlyAverage: React.FC<HourlyAverageProps> = ({ data, parameters }) => {
+export const HourlyAverage: React.FC<HourlyAverageProps> = ({ data, parameters, selectedDate }) => {
   const hourlyData = useMemo(() => {
     if (!data || data.length === 0) return [];
     
     // Group samples by hour to calculate the hourly average from the 15-min data
     const hourlyGroups: Record<string, Record<string, { sum: number; count: number }>> = {};
+
+    // Pre-populate all 24 hours for the selected date
+    const targetDateStr = selectedDate || format(new Date(), 'yyyy-MM-dd');
+    for (let i = 0; i < 24; i++) {
+      const hourString = i.toString().padStart(2, '0');
+      const hourBucket = `${targetDateStr} ${hourString}:00`;
+      hourlyGroups[hourBucket] = {};
+    }
 
     data.forEach((tagData) => {
       tagData.Samples.forEach((sample) => {
@@ -68,7 +77,7 @@ export const HourlyAverage: React.FC<HourlyAverageProps> = ({ data, parameters }
     });
 
     return rows;
-  }, [data, parameters]);
+  }, [data, parameters, selectedDate]);
 
   if (hourlyData.length === 0) {
     return <div className="p-4 text-center text-gray-500">No data available for hourly average</div>;
@@ -83,7 +92,7 @@ export const HourlyAverage: React.FC<HourlyAverageProps> = ({ data, parameters }
         <table className="w-full text-sm text-left">
           <thead className="text-xs text-gray-600 uppercase bg-gray-50">
             <tr>
-              <th className="px-6 py-4 font-medium align-top">Time (Hour)</th>
+              <th className="px-6 py-4 font-medium align-top">Date & Time</th>
               {parameters.map((param) => (
                 <th key={param.id} className="px-6 py-4 font-medium align-top" style={{ color: param.color }}>
                   <div className="flex flex-col gap-1">
@@ -102,7 +111,18 @@ export const HourlyAverage: React.FC<HourlyAverageProps> = ({ data, parameters }
             {hourlyData.map((row, index) => (
               <tr key={index} className="border-b border-gray-50 hover:bg-gray-50">
                 <td className="px-6 py-3 whitespace-nowrap text-gray-600 font-medium">
-                  {row.hour.split(' ')[1]}
+                  {(() => {
+                    const parts = row.hour.split(' ');
+                    if (parts.length === 2) {
+                      const dateParts = parts[0].split('-');
+                      if (dateParts.length === 3) {
+                        const yy = dateParts[0].slice(-2);
+                        return `${dateParts[2]}/${dateParts[1]}/${yy} ${parts[1]}`;
+                      }
+                      return `${parts[0]} ${parts[1]}`;
+                    }
+                    return row.hour;
+                  })()}
                 </td>
                 {parameters.map((param) => {
                   const val = row[param.tagNumber];

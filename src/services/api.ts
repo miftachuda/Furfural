@@ -25,15 +25,25 @@ export interface TagDataResponse {
   Samples: DataSample[];
 }
 
-export const fetchPlantData = async (tagNames: string[], sampleInterval: number = 900000): Promise<TagDataResponse[]> => {
+export const fetchPlantData = async (tagNames: string[], sampleInterval: number = 900000, targetDateStr?: string): Promise<TagDataResponse[]> => {
   if (tagNames.length === 0) return [];
 
-  const now = new Date();
-  const startTime = subDays(now, 1); // Get data for the last 24 hours
+  let startTime: Date;
+  let endTime: Date;
+
+  if (targetDateStr) {
+    const [year, month, day] = targetDateStr.split('-').map(Number);
+    startTime = new Date(year, month - 1, day, 0, 0, 0, 0);
+    endTime = new Date(year, month - 1, day, 23, 59, 59, 999);
+  } else {
+    const now = new Date();
+    startTime = subDays(now, 1); // Get data for the last 24 hours
+    endTime = now;
+  }
 
   // Format: "MM/dd/yyyy HH:mm:ss.SSS"
   const startFormat = format(startTime, 'MM/dd/yyyy HH:mm:ss.SSS');
-  const endFormat = format(now, 'MM/dd/yyyy HH:mm:ss.SSS');
+  const endFormat = format(endTime, 'MM/dd/yyyy HH:mm:ss.SSS');
 
   const payload: ApiPayload[] = [{
     SampleInterval: sampleInterval,
@@ -74,10 +84,17 @@ export const fetchPlantData = async (tagNames: string[], sampleInterval: number 
       const values = item.Value || [];
       
       const length = Math.min(timeStamps.length, values.length);
+      const now = new Date();
       
       for (let i = 0; i < length; i++) {
         // Skip empty timestamps
         if (timeStamps[i] && timeStamps[i] !== "") {
+          const sampleDate = new Date(timeStamps[i]);
+          // Skip future timestamps (greater than now)
+          if (!isNaN(sampleDate.getTime()) && sampleDate > now) {
+            continue;
+          }
+          
           samples.push({
             TimeStamp: timeStamps[i],
             Value: values[i]

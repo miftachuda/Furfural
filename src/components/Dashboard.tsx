@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from "react";
+import { format } from "date-fns";
 import { fetchParameters } from "../config/parameters";
 import type { PlantParameter } from "../config/parameters";
 import { fetchPlantData } from "../services/api";
 import type { TagDataResponse } from "../services/api";
+import { fetchFurfuralLossByDate } from "../services/furfuralLoss";
+import type { FurfuralLossRecord } from "../services/furfuralLoss";
 import { TrendChart } from "./TrendChart";
 import { HourlyAverage } from "./HourlyAverage";
 import { ParameterManager } from "./ParameterManager";
@@ -12,6 +15,8 @@ export const Dashboard: React.FC = () => {
   const [parameters, setParameters] = useState<PlantParameter[]>([]);
   const [trendData, setTrendData] = useState<TagDataResponse[]>([]);
   const [hourlyData, setHourlyData] = useState<TagDataResponse[]>([]);
+  const [lossRecord, setLossRecord] = useState<FurfuralLossRecord | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [loading, setLoading] = useState(false);
   const [paramsLoading, setParamsLoading] = useState(true);
 
@@ -41,10 +46,14 @@ export const Dashboard: React.FC = () => {
 
       // Fetch trend data (15 min interval = 900000ms)
       // We will use this same 15-min data to calculate hourly averages locally
-      const responseData = await fetchPlantData(tagNames, 900000);
+      const [responseData, dailyLossData] = await Promise.all([
+        fetchPlantData(tagNames, 900000, selectedDate),
+        fetchFurfuralLossByDate(selectedDate)
+      ]);
       
       setTrendData(responseData);
       setHourlyData(responseData);
+      setLossRecord(dailyLossData);
     } catch (error) {
       console.error("Failed to load data", error);
     } finally {
@@ -52,37 +61,56 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  // Reload data when parameters change (and are loaded)
+  // Reload data when parameters change or date changes
   useEffect(() => {
     if (!paramsLoading) {
       loadData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parameters, paramsLoading]);
+  }, [parameters, paramsLoading, selectedDate]);
 
   return (
-    <div className="min-h-screen bg-gray-50/50 p-6 font-sans">
+    <div className="p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <header className="flex justify-between items-center pb-4 border-b border-gray-200">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center pb-4 border-b border-gray-200 gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <Activity className="text-blue-600" />
               Furfural Close Look
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Real-time trending and hourly averages
+              Trending and hourly averages for selected date
             </p>
           </div>
 
-          <button
-            onClick={loadData}
-            disabled={loading || paramsLoading}
-            className={`flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors ${loading || paramsLoading ? "opacity-50 cursor-not-allowed" : ""}`}
-          >
-            <RefreshCcw size={16} className={loading ? "animate-spin" : ""} />
-            {loading ? "Refreshing..." : "Refresh Data"}
-          </button>
+          <div className="flex flex-wrap items-center gap-4">
+            {lossRecord ? (
+              <div className="bg-orange-100 border border-orange-200 rounded-md px-4 py-2 flex flex-col justify-center shadow-sm">
+                <span className="text-xs font-semibold text-orange-600 uppercase tracking-wider">Furfural Loss</span>
+                <span className="text-lg font-bold text-orange-800">{lossRecord.loss.toFixed(2)} <span className="text-sm font-medium text-orange-700">kg/day</span></span>
+              </div>
+            ) : (
+               <div className="bg-gray-50 border border-gray-200 rounded-md px-4 py-2 flex flex-col justify-center text-gray-500">
+                <span className="text-xs font-medium uppercase tracking-wider">Furfural Loss</span>
+                <span className="text-sm font-semibold">No data</span>
+              </div>
+            )}
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <button
+              onClick={loadData}
+              disabled={loading || paramsLoading}
+              className={`flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors ${loading || paramsLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+            >
+              <RefreshCcw size={16} className={loading ? "animate-spin" : ""} />
+              {loading ? "Refreshing..." : "Refresh Data"}
+            </button>
+          </div>
         </header>
 
         {/* Settings/Manager */}
@@ -108,7 +136,7 @@ export const Dashboard: React.FC = () => {
             </section>
 
             <section>
-              <HourlyAverage data={hourlyData} parameters={parameters} />
+              <HourlyAverage data={hourlyData} parameters={parameters} selectedDate={selectedDate} />
             </section>
           </div>
         )}
