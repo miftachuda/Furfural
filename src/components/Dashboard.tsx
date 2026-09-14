@@ -43,11 +43,20 @@ export const Dashboard: React.FC = () => {
     setLoading(true);
     try {
       const tagNames = parameters.map((p) => p.tagNumber);
+      
+      // Add tags needed for Feed Mode detection
+      const feedModeTags = [
+        "023FQI_004DA.PV", "023FQI_004DB.PV", 
+        "023FQI_004MA.PV", "023FQI_004MB.PV", 
+        "023FQI_004LA.PV", "023FQI_004LB.PV"
+      ];
+      
+      const tagsToFetch = Array.from(new Set([...tagNames, ...feedModeTags]));
 
       // Fetch trend data (15 min interval = 900000ms)
       // We will use this same 15-min data to calculate hourly averages locally
       const [responseData, dailyLossData] = await Promise.all([
-        fetchPlantData(tagNames, 900000, selectedDate),
+        fetchPlantData(tagsToFetch, 900000, selectedDate),
         fetchFurfuralLossByDate(selectedDate)
       ]);
       

@@ -63,6 +63,24 @@ export const HourlyAverage: React.FC<HourlyAverageProps> = ({ data, parameters, 
     // Calculate averages and format
     const rows = Object.keys(hourlyGroups).sort().map((hour) => {
       const row: any = { hour };
+
+      // Calculate Feed Mode for this hour
+      const has = (key: string) => {
+        return Object.entries(hourlyGroups[hour]).some(([tagName, stats]) => {
+          // MUST be one of the feed flow meters to prevent false matches with other parameters
+          if (!tagName.includes("023FQI_004")) return false;
+          if (!tagName.includes(key)) return false;
+          // Strict non-zero detection, allowing small floating point noise threshold
+          return stats.count > 0 && Math.abs(stats.sum / stats.count) > 0.01;
+        });
+      };
+
+      let feedMode = "-";
+      if (has("LA") || has("LB")) feedMode = "LMO";
+      else if (has("MA") || has("MB")) feedMode = "MMO";
+      else if (has("DA") || has("DB")) feedMode = "DAO";
+      row.feedMode = feedMode;
+
       parameters.forEach(param => {
         const stats = hourlyGroups[hour][param.tagNumber];
         if (stats && stats.count > 0) {
@@ -93,6 +111,7 @@ export const HourlyAverage: React.FC<HourlyAverageProps> = ({ data, parameters, 
           <thead className="text-xs text-gray-600 uppercase bg-gray-50">
             <tr>
               <th className="px-6 py-4 font-medium align-top">Date & Time</th>
+              <th className="px-6 py-4 font-medium align-top text-center">Feed Mode</th>
               {parameters.map((param) => (
                 <th key={param.id} className="px-6 py-4 font-medium align-top" style={{ color: param.color }}>
                   <div className="flex flex-col gap-1">
@@ -123,6 +142,15 @@ export const HourlyAverage: React.FC<HourlyAverageProps> = ({ data, parameters, 
                     }
                     return row.hour;
                   })()}
+                </td>
+                <td className="px-6 py-3 whitespace-nowrap text-center">
+                  {row.feedMode !== "-" ? (
+                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold tracking-wider text-blue-700 bg-blue-50 ring-1 ring-inset ring-blue-700/10">
+                      {row.feedMode}
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
                 </td>
                 {parameters.map((param) => {
                   const val = row[param.tagNumber];
