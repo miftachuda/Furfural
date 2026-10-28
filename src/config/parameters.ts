@@ -48,6 +48,24 @@ export const defaultParameters: PlantParameter[] = [
     limitHigh: 0.25,
     color: '#10b981', // Green
     unit: 'kg/cm²A'
+  },
+  {
+    tagNumber: '023LI_005.pv',
+    name: 'Level 023C-104',
+    description: 'Level 023C-104',
+    limitLow: 20,
+    limitHigh: 80,
+    color: '#8b5cf6', // Purple
+    unit: '%'
+  },
+  {
+    tagNumber: '023LI_019.pv',
+    name: 'Level 023V102A',
+    description: 'Level 023V102A',
+    limitLow: 20,
+    limitHigh: 80,
+    color: '#06b6d4', // Cyan
+    unit: '%'
   }
 ];
 
