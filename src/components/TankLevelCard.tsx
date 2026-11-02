@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import type { TagDataResponse } from '../services/api';
 import type { PlantParameter } from '../config/parameters';
 import { format } from 'date-fns';
-import { Gauge, Scale, AlertTriangle, CheckCircle2, TrendingUp, TrendingDown, Clock } from 'lucide-react';
+import { Gauge, Scale, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 
 interface TankLevelCardProps {
   data: TagDataResponse[];
@@ -15,7 +15,6 @@ const CONVERSION_FACTOR = 2.11; // 1% = 2.11 Ton
 export const TankLevelCard: React.FC<TankLevelCardProps> = ({
   data,
   parameters = [],
-  selectedDate,
 }) => {
   // Find the parameter configuration if available
   const paramConfig = useMemo(() => {
@@ -51,10 +50,6 @@ export const TankLevelCard: React.FC<TankLevelCardProps> = ({
     currentLevel,
     currentTon,
     latestTime,
-    minLevel,
-    maxLevel,
-    avgLevel,
-    sampleCount,
     hasData,
   } = useMemo(() => {
     if (!tagData || !tagData.Samples || tagData.Samples.length === 0) {
@@ -62,10 +57,6 @@ export const TankLevelCard: React.FC<TankLevelCardProps> = ({
         currentLevel: null,
         currentTon: null,
         latestTime: null,
-        minLevel: null,
-        maxLevel: null,
-        avgLevel: null,
-        sampleCount: 0,
         hasData: false,
       };
     }
@@ -81,12 +72,6 @@ export const TankLevelCard: React.FC<TankLevelCardProps> = ({
     });
 
     const latest = sorted[sorted.length - 1];
-    const values = sorted.map((s) => s.Value);
-
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    const sum = values.reduce((acc, curr) => acc + curr, 0);
-    const avg = sum / values.length;
 
     let timeStr = latest.TimeStamp;
     try {
@@ -110,10 +95,6 @@ export const TankLevelCard: React.FC<TankLevelCardProps> = ({
       currentLevel: latest.Value,
       currentTon: latest.Value * CONVERSION_FACTOR,
       latestTime: timeStr,
-      minLevel: min,
-      maxLevel: max,
-      avgLevel: avg,
-      sampleCount: sorted.length,
       hasData: true,
     };
   }, [tagData]);
@@ -171,7 +152,7 @@ export const TankLevelCard: React.FC<TankLevelCardProps> = ({
               </span>
             </div>
             <p className="text-xs text-gray-500 mt-0.5">
-              Monitoring Tangki / Vessel 023V102A & Konversi Ton
+              Monitoring Stock
             </p>
           </div>
         </div>
@@ -523,9 +504,9 @@ export const TankLevelCard: React.FC<TankLevelCardProps> = ({
           </div>
         </div>
 
-        {/* Right Columns: Level (%) & Ton Conversion & Stats (7 cols on md) */}
-        <div className="md:col-span-7 flex flex-col justify-between space-y-4">
-          {/* Top row: 2 prominent cards for Percent & Ton */}
+        {/* Right Columns: Level (%) & Ton Conversion (7 cols on md) */}
+        <div className="md:col-span-7 flex flex-col justify-center">
+          {/* 2 prominent cards for Percent & Ton */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {/* Card 1: Level in Percent */}
             <div className="bg-gradient-to-br from-cyan-50/70 to-sky-50/40 rounded-xl p-4 border border-cyan-200/80 shadow-2xs">
@@ -589,66 +570,6 @@ export const TankLevelCard: React.FC<TankLevelCardProps> = ({
                   Kapasitas 100%: <strong>211.00 Ton</strong>
                 </span>
               </div>
-            </div>
-          </div>
-
-          {/* Bottom Card: Daily Statistics & Limits Reference */}
-          <div className="bg-gray-50/80 rounded-xl p-3.5 border border-gray-200 text-xs">
-            <div className="flex items-center justify-between font-semibold text-gray-700 border-b border-gray-200 pb-2 mb-2.5">
-              <span>Statistik Tanggal {selectedDate || 'Hari Ini'}</span>
-              <span className="text-[11px] font-normal text-gray-500">
-                {sampleCount} titik pengukuran
-              </span>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              <div className="bg-white p-2 rounded-lg border border-gray-100 shadow-2xs">
-                <div className="flex items-center gap-1 text-gray-500 mb-0.5">
-                  <TrendingDown size={12} className="text-blue-500" />
-                  <span>Minimum</span>
-                </div>
-                <div className="font-bold text-gray-900 text-sm">
-                  {minLevel !== null ? `${minLevel.toFixed(1)}%` : '-'}
-                </div>
-                <div className="text-[10px] text-gray-500">
-                  {minLevel !== null ? `${(minLevel * CONVERSION_FACTOR).toFixed(2)} Ton` : '-'}
-                </div>
-              </div>
-
-              <div className="bg-white p-2 rounded-lg border border-gray-100 shadow-2xs">
-                <div className="flex items-center gap-1 text-gray-500 mb-0.5">
-                  <Scale size={12} className="text-cyan-500" />
-                  <span>Rata-Rata</span>
-                </div>
-                <div className="font-bold text-gray-900 text-sm">
-                  {avgLevel !== null ? `${avgLevel.toFixed(1)}%` : '-'}
-                </div>
-                <div className="text-[10px] text-gray-500">
-                  {avgLevel !== null ? `${(avgLevel * CONVERSION_FACTOR).toFixed(2)} Ton` : '-'}
-                </div>
-              </div>
-
-              <div className="bg-white p-2 rounded-lg border border-gray-100 shadow-2xs">
-                <div className="flex items-center gap-1 text-gray-500 mb-0.5">
-                  <TrendingUp size={12} className="text-orange-500" />
-                  <span>Maksimum</span>
-                </div>
-                <div className="font-bold text-gray-900 text-sm">
-                  {maxLevel !== null ? `${maxLevel.toFixed(1)}%` : '-'}
-                </div>
-                <div className="text-[10px] text-gray-500">
-                  {maxLevel !== null ? `${(maxLevel * CONVERSION_FACTOR).toFixed(2)} Ton` : '-'}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-2.5 pt-2 border-t border-gray-200/60 flex flex-wrap justify-between items-center text-[11px] text-gray-500">
-              <span>
-                Batas Aman: <strong>{limitLow}% ({ (limitLow * CONVERSION_FACTOR).toFixed(2) } T)</strong> – <strong>{limitHigh}% ({ (limitHigh * CONVERSION_FACTOR).toFixed(2) } T)</strong>
-              </span>
-              <span>
-                Vessel Tag: <strong className="font-mono text-gray-700">023V102A</strong>
-              </span>
             </div>
           </div>
         </div>
