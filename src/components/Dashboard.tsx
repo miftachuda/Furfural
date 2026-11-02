@@ -9,6 +9,7 @@ import type { FurfuralLossRecord } from "../services/furfuralLoss";
 import { TrendChart } from "./TrendChart";
 import { HourlyAverage } from "./HourlyAverage";
 import { ParameterManager } from "./ParameterManager";
+import { TankLevelCard } from "./TankLevelCard";
 import { Activity, RefreshCcw } from "lucide-react";
 
 export const Dashboard: React.FC = () => {
@@ -44,14 +45,16 @@ export const Dashboard: React.FC = () => {
     try {
       const tagNames = parameters.map((p) => p.tagNumber);
       
-      // Add tags needed for Feed Mode detection
-      const feedModeTags = [
+      // Add tags needed for Feed Mode detection and Vessel Level monitoring
+      const requiredTags = [
+        "023LI_019.pv",
+        "023LI_005.pv",
         "023FQI_004DA.PV", "023FQI_004DB.PV", 
         "023FQI_004MA.PV", "023FQI_004MB.PV", 
         "023FQI_004LA.PV", "023FQI_004LB.PV"
       ];
       
-      const tagsToFetch = Array.from(new Set([...tagNames, ...feedModeTags]));
+      const tagsToFetch = Array.from(new Set([...tagNames, ...requiredTags]));
 
       // Fetch trend data (15 min interval = 900000ms)
       // We will use this same 15-min data to calculate hourly averages locally
@@ -144,8 +147,18 @@ export const Dashboard: React.FC = () => {
               <TrendChart data={trendData} parameters={parameters} />
             </section>
 
-            <section>
-              <HourlyAverage data={hourlyData} parameters={parameters} selectedDate={selectedDate} />
+            {/* Vessel 023V102A Level Card & Hourly Average Table */}
+            <section className="space-y-4">
+              <TankLevelCard
+                data={hourlyData}
+                parameters={parameters}
+                selectedDate={selectedDate}
+              />
+              <HourlyAverage
+                data={hourlyData}
+                parameters={parameters}
+                selectedDate={selectedDate}
+              />
             </section>
           </div>
         )}
